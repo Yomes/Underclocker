@@ -1,59 +1,59 @@
 # Underclocker  
 Script to reduce CPU frequencies when temperature is too high  
+I have a problem with my computer: it gets very hot. I've already done all the normal things: cleaning, changing the thermal paste (a quality one), adjusting the fan speed... But nothing: when I do something that requires power, it goes up to 90-98°C. It's designed this way: this processor has a "normal" working temperature of 95°C and a critical temperature of 105°C. "Throttle" was set by the manufacturer in the BIOS and cannot be modified. But I don't like it: it can damage other components.  
+So... I got to work.  
   
-En mi equipo tengo un problema: se calienta mucho. Ya hago todo lo normal: limpieza, cambio de pasta térmica (una de calidad), alterar la velocidad del ventilador… Pero nada: cuando hago algo que requiere potencia, se pone a 90~98ºC. Está diseñado así: este procesador tiene una temperatura de trabajo “normal” de 95ºC y una crítica de 105ºC, el “throttling” lo estableció el fabricante en la BIOS y no se puede modificar. Pero no me gusta: puede dañar otros componentes.  
-Así que… me puse manos a la obra.  
+CAUTION! CAUTION! BE CAREFUL!  
+This is a work in progress, it's not finished. I've tested it on very few computers and I'm not responsible for any damage it may cause. I recommend running it on test computers, always under supervision.  
+Note: As far as I know, it can't be used in virtual machines: they don't have sensors.  
   
-¡OJO! ¡PRECAUCIÓN ¡CUIDADÍN!  
-Es un trabajo en curso, no está terminado, lo he probado en muy poco equipos y no me hago responsable de los daños que pudiera ocasionar. Recomiendo ejecutarlo en equipos de pruebas, siempre bajo supervisión.  
-Nota: Que yo sepa, no se puede usar en máquinas virtuales: no tienen sensores.  
+I've written a script that measures the temperature of all cores every second:  
+* If it goes above a certain value, it lowers the core's maximum frequency by a certain amount of MHz proportional to the current temperature and the desired temperature (to react quickly to heat spikes).  
+* If it falls below another value, it raises the frequency slightly.  
+For each frequency change, it waits 5 seconds for the heatsink to react and then repeats the cycle. Thus, the temperature eventually stabilizes at the desired value in a matter of seconds (10, 30, etc., depending on the number of "jumps" it must do), and it adapts to the needs of the moment.  
   
-He escrito un script que mide cada segundo la temperatura de todos los núcleos:  
-* Si pasa de un valor, baja la frecuencia máxima del núcleo una cantidad de Mhz proporcional entre la temperatura actual y la deseada (para reaccionar rápido ante picos de calor).  
-* Si queda por debajo de otro valor, sube un poco la frecuencia.  
-En cada cambio de frecuencia espera 5 segundos para que el disipador reaccione y vuelve a repetir el ciclo. Así, la temperatura se acaba estabilizando al valor deseado en cuestión de segundos (10, 30… depende de la cantidad de “saltos” que deba hacer), y se va adaptando a las necesidades del momento.  
+The script can generate a log with the frequency and temperature changes in a file and/or display notifications on the desktop, as well as via standard output (terminal, if it's running from one). The user can set the path and maximum length of the log.  
+Additionally, it can be left running indefinitely (ideal for running as a auto-executable script) or a time period can be set (for stress and performance tests), as well as a delay.  
+The script has rudimentary language support. It reads the output of _locale_ and uses a list of phrases in the matching language. English is the default. **You can contribute by adding languages**  
+Reads the temperature of nVidia graphics cards (tested only with a GTX 950M, with proprietary drivers). It checks if nvidia-smi exists and runs without errors; otherwise, it will not attempt to read GPU temperatures. **Partial support:** It only reads the temperature to add it to the log; it cannot modify GPU frequencies; it has not been tested with free drivers, or with very new or very old graphics cards.  
+When execution terminates (SIGINT signal, for example with Ctrl+C), it displays a message with the maximum temperature reached and restores the default maximum frequency.  
   
-El script puede generar un log con los cambios de frecuencia y temperatura en un archivo y/o mostrar notificaciones en el escritorio, además de por la salida estándar (terminal, si se ejecuta desde uno). El usuario puede establecer la ruta y la longitud máxima del log.  
-Además, se puede dejar funcionando indefinidamente (ideal para tenerlo como autoejecutable) o establecer un período de tiempo (para tests de estrés y rendimiento), además de establecer un retraso en la ejecución.  
-El script tiene un rudimentario soporte de idiomas. Lee la salida de _locale_ y utiliza una lista de frases en el idioma coincidente. Por defecto, en inglés. **Puede colaborar añadiendo idiomas**  
-Lee temperatura de gráficas nVidia (probado sólo con una GTX 950M, con drivers propietarios). Comprueba si nvidia-smi existe y se ejecuta sin errores; de lo contrario, no intentará leer temperaturas de GPU. **Soporte parcial:** sólo lee la temperatura para añadirla al log; no puede modificar frecuencias, no se ha probado con drivers libres, ni con gráficas muy modernas ni muy antiguas.  
-Al terminar la ejecución (señal SIGINT, por ejemplo con Ctrl+C) muestra un mensaje con la máxima temperatura alcanzada y restaura la frecuencia máxima por defecto.  
+Variables can be set within the script, passed as arguments, or entered via graphical dialogs. It includes an -h argument for basic help.  
+Arguments passed via the console take priority; if one is passed, the graphical mode will not prompt for it. In dialogs, the default value will be the one set in the script variables.  
+Dialog configuration can be disabled from the $gui variable in the script.  
+Additionally, if the $DISPLAY variable is not detected, it is assumed that the script is in non-graphical or non-interactive mode, so it neither displays notifications nor uses dialogs. The idea is to adapt as best as possible to these situations:  
+* The user runs the script directly, without parameters and without touching the variables: The script asks if they want to set them graphically. If they want, it asks everything, using the default values ​​entered in the script. If they don't want, it uses those values ​​as valid.  
+* The user runs the script from a non-interactive console (e.g., a distro without a desktop, just a terminal): There are no notifications or dialog boxes. Parameters can be used; otherwise, the default values ​​are used.  
+* The script is configured to autostart: either by setting all values ​​as parameters or by overriding the GUI (by editing the variable $gui = false or using the -g parameter). In the latter case, the script will prioritize the parameters and use the default values ​​for the rest.  
   
-Se pueden establecer las variables dentro del script, pasárselas como argumentos o introducirlas por diálogos gráficos. Incluye un argumento -h para recibir ayuda básica.  
-La prioridad la tienen los argumentos pasados por consola; si se ha pasado alguno, el modo gráfico no preguntará por él. En los diálogos, el valor por defecto será el que esté establecido en las variables del script.  
-La congifuración por cuadros de diálogo se puede desactivar desde la variable $gui en el script.  
-Además, si no se detecta la variable $DISPLAY, se asume que está sin modo gráfico o no interactivo, por lo que ni muestra notificaciones ni utiliza diálogos.La idea es adaptarse lo mejor posible a estas situaciones:  
-* Usuario ejecuta el script directamente, sin parámetros y sin tocar las variables: El script le pregunta si quiere establecerlas de forma gráfica. Si quiere, se pregunta todo, tomando por defecto los valores escritos en el script. Si no quiere, toma dichos valores como válidos.  
-* Usuario ejecuta el script desde una consola no interactiva (P.E.: Una distro sin escritorio, sólo terminal): No hay notificaciones ni cuadros de diálogo. Puede usar parámetros; de lo contrario, se toman los valores por defecto.  
-* Se configura el script para autoarranque: o bien se establecen todos los valores por parámetros o se anula el GUI (editando la variable $gui = false o mediante el parámetro -g). En este último caso, el script dará prioridad a los parámetros y tomará el resto de valores por defecto.
+**Two scripts in one**  
+Reading the temperatures is easy, but setting the frequency value can only be done as superuser. For this reason, I split the script into two: underclocker.sh has normal user permissions, and when a change needs to be made, it calls the script /usr/bin/setfreq.sh with sudo.  
   
-**Dos scripts en uno**  
-Leer las temperaturas es fácil, pero establecer el valor de frecuencia sólo se puede hacer como superusuario. Por este motivo, he dividido el script en dos: underclocker.sh tiene permisos de usuario normal, y cuando hay que hacer un cambio llama al script /usr/bin/setfreq.sh con sudo.  
+Underclocker detects if setfreq.sh exists. If it doesn't exist, it starts an installation of it:  
+1. The cpufreq.sh script, which requires permissions, is created in /usr/bin/setfreq.sh, with owner root:root and permissions 755. All its content is already included in the Underclocker body, so there's no need to download it separately.  
+2. To prevent it from prompting for a password every time (especially to be able to use it in a non-interactive shell), it needs to add passwordless sudo permissions for the second script. During installation, the line [ALL ALL=(ALL) NOPASSWD: /usr/bin/setfreq.sh] is added to the end of /etc/sudoers. To avoid duplication, it is first checked that this line does not already exist.  
   
-Underclocker detecta si existe setfreq.sh. Si no existe, inicia una instalación del mismo:
-1. El script cpufreq.sh, el que requiere permisos, se crea en /usr/bin/setfreq.sh, con propietario root:root y permisos 755. Todo su contenido ya está incluído en el cuerpo de Underclocker, así que no es necesario descargarlo aparte.  
-2. Para evitar que pida contraseña cada vez (sobre todo, para pder usarlo en una shell no interactiva), es necesario añadir permisos de sudo sin contraseña para el segundo script. Durante la instalación se añade la línea [ALL ALL=(ALL) NOPASSWD: /usr/bin/setfreq.sh] al final de /etc/sudoers. Para evitar duplicidades, antes se comprueba que dicha línea no exista ya.  
+Setfreq.sh has two functions:  
+1. Change the core frequency. To do this, Underclocker sends the number of the core to be changed as the first parameter and the desired frequency as the second parameter.  
+2. Change the "governor" (the processor's power consumption mode). Underclocker sends the string "governor" as the first parameter and the name of the desired governor as the second parameter.  
   
-Setfreq.sh tiene dos funciones:
-1. Cambiar la frecuencia de los núcleos. Para ello, Underclocker le envía como primer parámetro el número del núcleo a cambiar y como segundo parámetro la frecuencia deseada.  
-2. Cambiar el "governor", esto es, el modo de consumo energético del procesador. Underclocker enviará como primer parámetro la cadena "governor" y como segundo parámetro el nombre del governor deseado.  
-
-**Ayuda**
-Este script monitoriza la temperatura de la CPU, reduce la frecuencia máxima cuando es muy alta y la aumenta cuando es suficientemente baja, y puede crear un log con sus acciones, temperaturas, fecuencias y fecha y hora. de cada evento.  
+**Help**  
+```This script monitors the CPU temperature, reduces the maximum frequency when it is too high and increases it when it is low enough. It can create a log with its actions, temperatures, frequencies, and the date and time of each event.  
   
-Lista de parámetros válidos:  
-  -d <segundos> 	 Retraso antes de ejecutar el script.  
-  -t <segundos> 	 Tiempo en segundos de ejecución del script. Si es 0, el script no parará.  
-  -p <governor> 	 Power governor (usar [-p list] para seleccionarlo de una lista)  
-  -l <ºC> 	 Temperatura máxima deseada.  
-  -r <ºC> 	 Temperatura mínima para aumentar la frecuencia.  
-  -f <file> 	 Archivo a usar como log.  
-  -s <size> 	 Tamaño máximo, en filas, del archivo de log.  
-  -n <yes | no> 	 Activar o desactivar notificaciones de escritorio.  
-  -g 	 Deshabilita la configuración gráfica.  
+List of valid parameters:  
+-d <seconds>	Delay before running the script.  
+-t <seconds>	Time in seconds to run the script. If 0, the script will not stop.  
+-p <governor>	Power governor (use [-p list] to select one from a list)  
+-l <ºC>		Maximum desired temperature.  
+-r <ºC>		Minimum temperature to boost frequency.  
+-f <file>	File to use as log.  
+-s <size>	Maximum size, in rows, of the log file.  
+-n <yes | no>	Enable or disable desktop notifications.  
+-g		Disable graphical settings.  
   
-Ejemplo: Limita la frecuencia cuando la temperatura llega a 85ºC, la restaura cuando la temperatura es menor de 75ºC y muestra notificaciones de escritorio:  
-  ./underclocker.sh -l 85 -r 75 -n yes  
-
-Ejemplo: Limita la frecuencia cuando la temperatura llega a 70ºC, la restaura cuando la temperatura es menor de 50ºC, espera 30 segundos antes de ejecutar el script, se ejecuta durante 5 minutos (300 segundos), desactiva la confguración gráfica y guarda el log en <HOME>/temper.txt:  
-  ./underclocker.sh -l 70 -r 50 -d 30 -t 300 -g -f ~/temper.txt
+Example: Limits the frequency when the temperature reaches 85°C, restores it when the temperature drops below 75°C, and displays desktop notifications:  
+./underclocker.sh -l 85 -r 75 -n yes  
+  
+Example: Limits the frequency when the temperature reaches 70°C, restores it when the temperature drops below 50°C, waits 30 seconds before running the script, runs for 5 minutes (300 seconds), disables the graphical configuration, and saves the log to <HOME>/temper.txt:  
+./underclocker.sh -l 70 -r 50 -d 30 -t 300 -g -f ~/temper.txt  
+```
